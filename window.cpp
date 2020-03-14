@@ -9,7 +9,7 @@
 #define DEFAULT_A -10
 #define DEFAULT_B 10
 #define DEFAULT_N 8
-#define DEFAULT_M 8192
+#define DEFAULT_M 1080
 #define DEFAULT_DSR 0.
 
 static
@@ -79,6 +79,18 @@ double df_4 (double x)
   return - a / b;
 }
 
+static
+double f_5 (double )
+{
+  return 1;
+}
+
+static
+double df_5 (double )
+{
+  return 0;
+}
+
 Window::Window (QWidget *parent)
   : QWidget (parent)
 {
@@ -124,7 +136,7 @@ int Window::parse_command_line (int argc, char *argv[])
 /// change current function for drawing
 void Window::change_func ()
 {
-  func_id = (func_id + 1) % 5;
+  func_id = (func_id + 1) % 6;
 
   switch (func_id)
     {
@@ -149,9 +161,14 @@ void Window::change_func ()
     df = df_3;
     break;
   case 4:
-    f_name = "f (x) = 1 / (|tanx^4| + 1)";
+    f_name = "f (x) = 1 / (|tanx^3| + 1)";
     f = f_4;
     df = df_4;
+    break;
+  case 5:
+    f_name = "f (x) = 1";
+    f = f_5;
+    df = df_5;
     break;
     }
   update ();
@@ -274,7 +291,7 @@ void Window::paintEvent (QPaintEvent * /* event */)
   painter.drawText (0, 65, "method = " + method_name);
 
   painter.drawText (0, 80, "a = " + QString::number(a) + " b = " + QString::number(b));
-  painter.drawText (0, 95, "disrep = " + QString::number(dsr));
+  painter.drawText (0, 95, "error = " + QString::number(dsr));
 
 }
 
@@ -356,7 +373,7 @@ double Window::findDsrKk (std::vector<double>& out, std::vector<double>& in, siz
 void Window::paintGraph (QPainter& painter, Qt::GlobalColor color){
 //    printf("paintGraph called\n");
     fflush(stdout);
-    QPen pen(color, 0.5, Qt::SolidLine);
+    QPen pen(color, 1, Qt::SolidLine);
      pen.setCosmetic(1);
     painter.setPen(pen);
     auto x = std::vector<double> (n+1);
