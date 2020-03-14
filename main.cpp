@@ -27,6 +27,15 @@ int main (int argc, char *argv[])
   action = tool_bar->addAction ("Change function", graph_area, SLOT (change_func ()));
   action->setShortcut (QString ("Ctrl+C"));
 
+  action = tool_bar->addAction ("Double n", graph_area, SLOT (double_n ()));
+  action->setShortcut (QString ("Ctrl++"));
+  action = tool_bar->addAction ("Half n", graph_area, SLOT (half_n ()));
+  action->setShortcut (QString ("Ctrl+-"));
+
+  action = tool_bar->addAction ("Double m", graph_area, SLOT (double_m ()));
+  action = tool_bar->addAction ("Half m", graph_area, SLOT (half_m ()));
+
+  action = tool_bar->addAction ("Change method", graph_area, SLOT (change_method ()));
   action = tool_bar->addAction ("Exit", window, SLOT (close ()));
   action->setShortcut (QString ("Ctrl+X"));
 
