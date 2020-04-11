@@ -138,11 +138,12 @@ Window::parse_command_line (int argc, char *argv[])
   if (argc == 1)
     return 0;
 
-  if (argc == 2)
+  if (argc != 5)
     return -1;
 
   if (sscanf (argv[1], "%lf", &a) != 1 || sscanf (argv[2], "%lf", &b) != 1 ||
-      b - a < 1.e-6 || (argc > 3 && sscanf (argv[3], "%d", &n) != 1) || n <= 0)
+      b - a < 1.e-6 || (argc > 3 && sscanf (argv[3], "%d", &n) != 1) || n <= 0
+      || (sscanf (argv[4], "%d", &this->func_id) != 1))
     return -2;
 
   return 0;
