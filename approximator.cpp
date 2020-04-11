@@ -1,21 +1,21 @@
 #include "approximator.h"
 #include "algorithm"
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
+#include <memory>
 
-result
+double
 Approximator::approxSimple (double x)
 {
   if (*_x.begin () > x || *(_x.end () - 1) < x)
     {
       printf ("out of bounds");
       fflush (stdout);
-      return "out_of_bounds";
+      return 0;
     }
   auto res_x = std::lower_bound (_x.cbegin (), _x.cend (), x);
   auto res_xi = res_x - _x.cbegin ();
-  //    printf("res_xi = %ld\n", res_xi);
-  //    fflush(stdout);
   auto res_yi = res_xi;
   auto res_y = _y.cbegin () + res_yi;
   if (cmp (*res_x, x))
@@ -37,7 +37,7 @@ Approximator::approxSimple (double x)
   //    return std::variant<double, std::string> (1);
 }
 
-result
+double
 Approximator::approxNewton (double x, bool skip_diffs = 1)
 {
   int n = _y.size ();
@@ -54,7 +54,7 @@ Approximator::approxNewton (double x, bool skip_diffs = 1)
               if (cmp (_x[i + s + 1], _x[i]))
                 {
                   printf ("Not correct data\n");
-                  return "got delete by zero";
+                  return 0;
                 }
               else
                 {
@@ -62,22 +62,15 @@ Approximator::approxNewton (double x, bool skip_diffs = 1)
                     {
                       _y[i] = 0;
                     }
-//                  if (std::abs (_y[i + 1]) > 1e40 && std::abs (_y[i]) > 1e40)
-//                    {
-//                      _y[i] = 1e40;
-//                    }
                   else
                     _y[i] = (_y[i + 1] - _y[i]) / (_x[i + s + 1] - _x[i]);
                 }
               if (i == 0)
                 {
                   _diffs[d] = _y[i];
-                  // printf("diff%d=%lf\n",d,diff[d]);
                   d++;
                 }
             }
-          // printf("%d:\n", n - k+1);
-          // for(i = 0; i < n; i++){printf("%d:  %lf\n", i, y[i]);}
           k--;
           s++;
         }
@@ -86,24 +79,22 @@ Approximator::approxNewton (double x, bool skip_diffs = 1)
 
   for (i = n - 2; i >= 0; i--)
     {
-      // printf("pred raznostb %lf\n", diff[i]);
       L *= x - _x[i]; //домножаем на коэф
       L += _diffs[i]; //прибавляем предыдущую разность
                       // printf("L = %lf", L);
     }
-  // printf("final L=%lf\n", L);
 
   return L;
 }
 
-result
+double
 Approximator::approxCubicSpline (double x)
 {
   if (*_x.begin () > x || *(_x.end () - 1) < x)
     {
       printf ("out of bounds");
       fflush (stdout);
-      return "out_of_bounds";
+      return 0;
     }
 
   auto res_x = std::upper_bound (_x.cbegin (), _x.cend (), x);
@@ -129,56 +120,54 @@ Approximator::approxCubicSpline (double x)
 bool
 Approximator::initCubicSpline (double d1, double dn)
 {
-//  printf ("init cubic solver\n");
   int n = _x.size ();
-  auto matr = new double[4 * n];
-  auto a = matr;
-  auto b = a + n;
-  auto c = b + n;
-  auto d = c + n;
-  memset (matr, 0, sizeof (double) * n * 4);
-  for (int row = 0; row < n; row++)
+//  auto matr = new double[3 * n];
+//  auto a = matr;
+//  auto b = a + n;
+//  auto c = b + n;
+  _diffs.reserve (n);
+  auto &d = _diffs;
+  //  memset (matr, 0, sizeof (double) * n * 3);
+
+  _b[0] = 1;
+  _c[0] = 0;
+  d[0] = d1;
+  _b[n - 1] = 1;
+  _a[n - 1] = 0;
+  d[n - 1] = dn;
+
+  _c[9] /= _b[0];
+  d[0] /= _b[0];
+  for (int i = 1; i < n - 1; i++)
     {
-      if (row == 0)
-        {
-          b[0] = 1;
-          c[0] = 0;
-          d[0] = d1;
-        }
-      else if (row == n - 1)
-        {
-          b[n - 1] = 1;
-          a[n - 1] = 0;
-          d[n - 1] = dn;
-        }
-      else
-        {
-          a[row] = _x[row + 1] - _x[row];
-          b[row] = _x[row + 1] - _x[row - 1];
-          c[row] = _x[row] - _x[row - 1];
-          double diff1 = (_y[row] - _y[row - 1]) / (_x[row] - _x[row - 1]);
-          double diff2 = (_y[row + 1] - _y[row]) / (_x[row + 1] - _x[row]);
-          d[row] = 3 * (diff1 * (_x[row + 1] - _x[row]) +
-                        diff2 * (_x[row] - _x[row - 1]));
-        }
+      _a[i] = _x[i + 1] - _x[i];
+      _b[i] = _x[i + 1] - _x[i - 1];
+      _c[i] = _x[i] - _x[i - 1];
+      double diff1 = (_y[i] - _y[i - 1]) / (_x[i] - _x[i - 1]);
+      double diff2 = (_y[i + 1] - _y[i]) / (_x[i + 1] - _x[i]);
+      d[i] = 3 * (diff1 * (_x[i + 1] - _x[i]) +
+                    diff2 * (_x[i] - _x[i - 1]));
+      _c[i] /= _b[i] - _a[i]*_c[i-1];
+      d[i] = (d[i] - _a[i] * d[i - 1]) / (_b[i] - _a[i] * _c[i - 1]);
     }
-  _diffs.resize (n);
-  auto res = solve (a, b, c, d, n);
+
+  auto res = solve (_a.data(), _b.data(), _c.data(), d.data (), n);
   if (res)
     {
       printf ("solve failes = %d\n", res);
-      delete[] matr;
+//      delete[] matr;
       return res;
     }
-  for (int i = 0; i < n; i++)
-    {
-      _diffs[i] = d[i];
-    }
-  delete[] matr;
+  //  for (int i = 0; i < n; i++)
+  //    {
+  //      _diffs[i] = d[i];
+  //      memcpy(_diffs.)
+  //    }
+//  delete[] matr;
   return 0;
 }
 
-result
+double
 Approximator::approximate (double x)
 {
   switch (_method)
@@ -195,11 +184,10 @@ Approximator::approximate (double x)
 }
 
 void
-Approximator::update (double d1, double dn, GraphMethod method)
+Approximator::update (double d1, double dn, GraphMethod)
 {
   _d1 = d1;
   _dn = dn;
-  _method = method;
 }
 
 bool
@@ -221,17 +209,7 @@ Approximator::computeOut (bool to_recalc)
   for (int i = 0; i < (int)n; i++)
     {
       auto res = approximate (_in[i]);
-      if (res.index () == 1)
-        {
-          printf ("Problem x[%d]=%lf : %s\n", i, _in[i],
-                  std::get<1> (res).c_str ());
-          fflush (stdout);
-          return 1;
-        }
-      else
-        {
-          _out[i] = std::get<double> (res);
-        }
+      _out[i] = res;
     }
   return 0;
 }
@@ -249,6 +227,11 @@ Approximator::Approximator (GraphMethod method) : _method (method)
 {
   _x.reserve (10000000);
   _y.reserve (10000000);
+  if(method == GraphMethod::cubic_spline){
+      _a.reserve(100000000);
+      _b.reserve(100000000);
+      _c.reserve(100000000);
+    }
   _in.reserve (5000);
   _out.reserve (5000);
 }
@@ -382,26 +365,13 @@ int
 solve (double *a, double *b, double *c, double *d, int n)
 {
   n--; // since we start from x0 (not x1)
-  c[0] /= b[0];
-  d[0] /= b[0];
+//  c[0] /= b[0];
+//  d[0] /= b[0];
 
-  for (int i = 1; i < n; i++)
-    {
-//      if (cmp (b[i] - a[i] * c[i - 1], 0.))
-//        {
-//          return 1;
-//        }
-      c[i] /= b[i] - a[i] * c[i - 1];
-//      if (cmp (b[i] - a[i] * c[i - 1], 0.))
-//        {
-//          return 1;
-//        }
-      d[i] = (d[i] - a[i] * d[i - 1]) / (b[i] - a[i] * c[i - 1]);
-    }
-
-//  if (cmp (b[n] - a[n] * c[n - 1], 0.))
+//  for (int i = 1; i < n; i++)
 //    {
-//      return 1;
+//      c[i] /= b[i] - a[i] * c[i - 1];
+//      d[i] = (d[i] - a[i] * d[i - 1]) / (b[i] - a[i] * c[i - 1]);
 //    }
   d[n] = (d[n] - a[n] * d[n - 1]) / (b[n] - a[n] * c[n - 1]);
 

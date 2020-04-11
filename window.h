@@ -6,6 +6,14 @@
 #include "graphMethod.h"
 #include <QtWidgets/QtWidgets>
 
+enum class content_type
+{
+  newton,
+  cubic_spline,
+  both,
+  both_error
+};
+
 class Window : public QWidget
 {
   Q_OBJECT
@@ -14,18 +22,21 @@ public:
 
 private:
   int func_id;
-  GraphMethod method;
+  content_type content;
   const char *f_name;
   double a;
   double b;
   double dsr;
+  double elapsed = 0;
   int n;
+  int p;
   size_t m;
   bool m_show_disrep;
   bool m_need_to_recalc;
   double (*f) (double);
   double (*df) (double);
   Approximator *m_approximator;
+  Approximator *m_approximator_newton;
 
   void
   simpleApprox (QPainter &painter, double delta_x);
@@ -54,10 +65,13 @@ private:
   zoom (double coef);
   void
   calc_out (vector &x, vector &y, vector &in, vector &out, bool to_recalc);
-  void
-  calc_out (bool to_recalc);
   double
   check_disrep (const vector &x, const vector &y, double (*f) (double));
+
+  void
+  change_delta (int p);
+  void
+  calc_out (Approximator &approx, bool to_recalc);
 
 public:
   Window (QWidget *parent);
@@ -71,15 +85,13 @@ public:
   parse_command_line (int argc, char *argv[]);
 
   void
-  paintMap (vector &x, vector &y, QPainter &painter, Qt::GlobalColor color);
+  paintMap (vector &x, vector &y, QPainter &painter, QPen &pen);
   void
   calc_disrep (const vector &x, const vector &y, vector &disrep,
                double (*f) (double));
 public slots:
   void
   change_func ();
-  void
-  change_method ();
   void
   double_n ();
   void
@@ -94,7 +106,15 @@ public slots:
   void
   zoom_out ();
 
-  void set_big_n();
+  void
+  set_big_n ();
+  void
+  add_delta ();
+  void
+  subtract_delta ();
+  void
+  change_content ();
+
 protected:
   void
   paintEvent (QPaintEvent *event);

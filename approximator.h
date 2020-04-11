@@ -33,21 +33,24 @@ class Approximator
 {
   // given
 
-  result
+  double
   approxSimple (double x);
-  result
+  double
   approxNewton (double x, bool);
-  result
+  double
   approxCubicSpline (double x);
   bool
   initCubicSpline (double, double);
-  result
+  double
   approximate (double x);
 
 public:
   std::vector<double> _x;
   std::vector<double> _y;
   std::vector<double> _in;
+  std::vector<double> _a;
+  std::vector<double> _b;
+  std::vector<double> _c;
   double _d1;
   double _dn;
   // to find

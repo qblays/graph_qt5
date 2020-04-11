@@ -3,6 +3,8 @@
 #include <stdio.h>
 
 #include "window.h"
+#include <chrono>
+#include <iostream>
 #include <thread>
 
 #define DEFAULT_A -10
@@ -12,68 +14,63 @@
 #define DEFAULT_DSR 0.
 
 static double
-f_0 (double x)
-{
-  double a = fabs (tan (x * x * x)) + 1;
-  return 1 / a;
-}
-
-static double
-df_0 (double x)
-{
-  double a = 3 * x * x * tan (x * x * x);
-  double c = fabs (tan (x * x * x));
-  double cx4 = cos (x * x * x);
-  double b = c * (c + 1) * (c + 1) * cx4 * cx4;
-  return -a / b;
-}
-
-static double
-f_1 (double)
+f_0 (double)
 {
   return 1;
 }
 
 static double
-df_1 (double)
+df_0 (double)
 {
   return 0;
 }
 
 static double
-f_2 (double x)
+f_1 (double x)
 {
   return x;
 }
 
 static double
-df_2 (double)
+df_1 (double)
 {
   return 1;
 }
 
 static double
+f_2 (double x)
+{
+  return x * x;
+}
+
+static double
+df_2 (double x)
+{
+  return 2 * x;
+}
+
+static double
 f_3 (double x)
 {
-  return 20 * x - .1 * x * x * x;
+  return x * x * x;
 }
 
 static double
 df_3 (double x)
 {
-  return 20 - .3 * x * x;
+  return 3 * x * x;
 }
 
 static double
 f_4 (double x)
 {
-  return sin (x);
+  return x * x * x * x;
 }
 
 static double
 df_4 (double x)
 {
-  return cos (x);
+  return 4 * x * x * x;
 }
 
 static double
@@ -88,19 +85,37 @@ df_5 (double x)
   return exp (x);
 }
 
+static double
+f_6 (double x)
+{
+  return 1 / (25 * x * x + 1);
+}
+
+static double
+df_6 (double x)
+{
+  return -50 * x / ((25 * x * x + 1) * (25 * x * x + 1));
+}
+
 Window::Window (QWidget *parent) : QWidget (parent)
 {
   a = DEFAULT_A;
   b = DEFAULT_B;
   n = DEFAULT_N;
   m = DEFAULT_M;
+  p = 0;
   dsr = DEFAULT_DSR;
   m_show_disrep = 0;
   m_need_to_recalc = 0;
-  func_id = 0;
-  method = GraphMethod::simple;
+  func_id = 6;
+  this->content = content_type::newton;
 
-  m_approximator = new Approximator (method);
+  m_approximator = new Approximator (GraphMethod::cubic_spline);
+  m_approximator_newton = new Approximator (GraphMethod::newton);
+  m_approximator->_x.resize (100000000);
+  m_approximator->_y.resize (100000000);
+  m_approximator->_x.resize (0);
+  m_approximator->_y.resize (0);
 
   change_func ();
 }
@@ -137,37 +152,37 @@ Window::parse_command_line (int argc, char *argv[])
 void
 Window::change_func ()
 {
-  func_id = (func_id + 1) % 6;
+  func_id = (func_id + 1) % 7;
 
   switch (func_id)
     {
     case 0:
-      f_name = "f (x) = 1 / (|tanx^3| + 1)";
+      f_name = "f = 1";
       f = f_0;
       df = df_0;
       break;
     case 1:
-      f_name = "f (x) = 1";
+      f_name = "f = x";
       f = f_1;
       df = df_1;
       break;
     case 2:
-      f_name = "f (x) = x";
+      f_name = "f = x^2";
       f = f_2;
       df = df_2;
       break;
     case 3:
-      f_name = "f (x) = 20x - 0.1x^3";
+      f_name = "f = x^3";
       f = f_3;
       df = df_3;
       break;
     case 4:
-      f_name = "f (x) = sin(x)";
+      f_name = "f = x^4";
       f = f_4;
       df = df_4;
       break;
     case 5:
-      f_name = "f (x) = exp (x)";
+      f_name = "f = exp(x)";
       f = f_5;
       df = df_5;
       if (std::max (std::abs (a), std::abs (b)) > 39)
@@ -177,21 +192,20 @@ Window::change_func ()
           b = 10;
         }
       break;
+    case 6:
+      f_name = "f = 1/(25*x^2 + 1)";
+      f = f_6;
+      df = df_6;
+      break;
     }
   m_need_to_recalc = 1;
   update ();
 }
 
 void
-Window::change_method ()
+Window::change_content ()
 {
-  method = (GraphMethod) (((int)method + 1) % 3);
-  if (method == GraphMethod::newton)
-    {
-      n = 64;
-    }
-
-  m_need_to_recalc = 1;
+  this->content = (content_type) (((int)this->content + 1) % 4);
   update ();
 }
 
@@ -201,10 +215,6 @@ Window::double_n ()
   if (n < (2 << 25))
     {
       n *= 2;
-      if (n >= 128 && method == GraphMethod::newton)
-        {
-          n = 64;
-        }
       m_need_to_recalc = 1;
       update ();
     }
@@ -213,12 +223,9 @@ Window::double_n ()
 void
 Window::set_big_n ()
 {
-  if (method != GraphMethod::newton)
-    {
-      n = 2097152;
-      m_need_to_recalc = 1;
-      update ();
-    }
+  n = 2 << 25;
+  m_need_to_recalc = 1;
+  update ();
 }
 
 void
@@ -242,6 +249,26 @@ Window::zoom_in ()
 }
 
 void
+Window::change_delta (int p)
+{
+  this->p = p;
+  m_need_to_recalc = 1;
+  update ();
+}
+
+void
+Window::add_delta ()
+{
+  this->change_delta (this->p + 1);
+}
+
+void
+Window::subtract_delta ()
+{
+  this->change_delta (this->p - 1);
+}
+
+void
 Window::zoom_out ()
 {
   if (std::max (std::abs (a), std::abs (b)) > 39 && func_id == 5)
@@ -253,8 +280,8 @@ Window::zoom_out ()
   else
     {
       zoom (2);
-      m_need_to_recalc = 1;
     }
+  m_need_to_recalc = 1;
   update ();
 }
 
@@ -311,9 +338,9 @@ Window::scale (QPainter &painter, double max_y, double min_y)
     {
       scaling = std::abs (max_y);
     }
-//  printf ("scale(%lf, %lf), tr(%lf, %lf)\n", width () / (b - a),
-//          -height () / scaling, -0.5 * (a + b), -0.5 * (min_y + max_y));
-//  fflush (stdout);
+  //  printf ("scale(%lf, %lf), tr(%lf, %lf)\n", width () / (b - a),
+  //          -height () / scaling, -0.5 * (a + b), -0.5 * (min_y + max_y));
+  //  fflush (stdout);
   painter.scale (width () / (b - a), -height () / (scaling));
   painter.translate (-0.5 * (a + b), -0.5 * (min_y + max_y));
 }
@@ -340,7 +367,7 @@ Window::paintAxis (QPainter &painter, double max_y, double min_y)
     {
       min_y = -aa;
     }
-  QColor c = QColor(150, 130, 130);
+  QColor c = QColor (150, 130, 130);
   QPen pen_red (c, 1, Qt::DotLine);
   pen_red.setCosmetic (1);
   painter.setPen (pen_red);
@@ -357,107 +384,186 @@ Window::printMiscInfo (QPainter &painter, double min_y, double max_y)
   pen.setCosmetic (1);
   painter.setPen (pen);
   char buf[60];
-  sprintf (buf, "%d/6: ", func_id + 1);
+  sprintf (buf, "%d/7: ", func_id + 1);
   QString func_name = buf;
-  if (m_show_disrep)
-    {
-      func_name += "disrep for ";
-    }
   int shift = 10;
-  painter.fillRect (5, 5, 280, 100, brush);
+  painter.fillRect (5, 5, 250, 95, brush);
   painter.drawText (shift, 20, func_name + f_name);
-  painter.drawText (shift, 35, "n = " + QString::number (n));
-  QString method_name;
-  switch (method)
+  painter.drawText (150, 20, "n = " + QString::number (n));
+  QString content_name;
+  switch (this->content)
     {
-    case GraphMethod::simple:
-      method_name = "simple";
+    case content_type::newton:
+      content_name = "newton";
       break;
-    case GraphMethod::newton:
-      method_name = "newton";
+    case content_type::cubic_spline:
+      content_name = "cubic spline";
       break;
-    case GraphMethod::cubic_spline:
-      method_name = "cubic_spline";
+    case content_type::both:
+      content_name = "both";
+      break;
+    case content_type::both_error:
+      content_name = "both errors";
       break;
     }
 
-  painter.drawText (shift, 50, "m = " + QString::number (m));
-  painter.drawText (shift, 65, "method = " + method_name);
+  painter.drawText (shift, 35, "content = " + content_name);
+  painter.drawText (150, 35, "width = " + QString::number (m));
 
   painter.drawText (
-      shift, 80, "a = " + QString::number (a) + " b = " + QString::number (b));
+      shift, 50, "a = " + QString::number (a) + " b = " + QString::number (b));
   sprintf (buf, "min, max = %.3e, %.3e", min_y, max_y);
+  painter.drawText (shift, 65, buf);
+  sprintf (buf, "p=%d", this->p);
+  painter.drawText (160, 50, buf);
+  brush.setColor (Qt::white);
+  brush.setStyle (Qt::BrushStyle::SolidPattern);
+  painter.fillRect (10, 70, 12, 12, brush);
+  painter.drawText (30, 80, "exact");
+  brush.setColor (Qt::red);
+  painter.fillRect (90, 70, 12, 12, brush);
+  painter.drawText (110, 80, "spline");
+  brush.setColor (Qt::green);
+  painter.fillRect (180, 70, 12, 12, brush);
+  painter.drawText (200, 80, "newton");
+  sprintf (buf, "elapsed = %.3lf", this->elapsed);
   painter.drawText (shift, 95, buf);
 }
 
-/// render graph
+// render graph
 void
 Window::paintEvent (QPaintEvent * /* event */)
 {
+  auto t0 = std::chrono::high_resolution_clock::now ();
   QPainter painter (this);
   m = width ();
-  QColor c = QColor(38, 38, 38);
+  QColor c = QColor (38, 38, 38);
   QBrush brush (c);
   painter.fillRect (5, 5, width (), height (), brush);
-  //  painter.setRenderHint(QPainter::Antialiasing, true);
-
-  //  QPen pen_black(Qt::black, 0, Qt::SolidLine);
-
-  //  painter.setPen (pen_black);
-  //  auto x = vector (n+1);
-  //  auto y = vector (n+1);
 
   auto &x = m_approximator->_x;
   auto &y = m_approximator->_y;
   auto &in = m_approximator->_in;
   auto &out = m_approximator->_out;
   auto &diffs = m_approximator->_diffs;
+
   x.resize (n + 1);
   y.resize (n + 1);
   diffs.resize (n + 1);
   in.resize (m + 1);
   out.resize (m + 1);
+  auto t4 = std::chrono::high_resolution_clock::now ();
   if (m_need_to_recalc)
     {
       initVector (x, y);
     }
+  auto t5 = std::chrono::high_resolution_clock::now ();
+  vector x_real;
+  vector y_real;
+  x_real.resize (m + 1);
+  y_real.resize (m + 1);
+  initVector (x_real, y_real);
+  double max = *std::max_element (
+      y_real.cbegin (), y_real.cend (),
+      [] (double x, double y) { return std::abs (x) < std::abs (y); });
+  y[n / 2] += this->p * max;
   initInVector (in);
-  calc_out (m_need_to_recalc);
-  if (m_show_disrep)
+
+  auto t1 = std::chrono::high_resolution_clock::now ();
+  calc_out (*this->m_approximator, m_need_to_recalc);
+  auto t2 = std::chrono::high_resolution_clock::now ();
+  std::cout << "spline time: " << (t2 - t1).count () / 1.e9 << "s" << std::endl;
+
+  if (this->content == content_type::both_error)
     {
       calc_disrep (in, out, out, f);
     }
-  if (method == GraphMethod::newton)
-    {
-      double max_disrep = check_disrep (in, out, f);
-      if (max_disrep > 1e100)
-        {
-          printf ("Newton failed, max disrep = %e, half n\n", max_disrep);
-          fflush (stdout);
-          n /= 2;
-          if (n == 0)
-            {
-              n = 1;
-            }
-          update ();
-          return;
-        }
-    }
+
   out = m_approximator->get_out ();
-  m_need_to_recalc = 0;
+
   auto [min_y_it, max_y_it] = std::minmax_element (begin (out), end (out));
+
   auto [min_y, max_y] = std::pair{*min_y_it, *max_y_it};
+
+  // newton
+  if (this->n <= 50 && this->content != content_type::cubic_spline)
+    {
+      auto &x = m_approximator_newton->_x;
+      auto &y = m_approximator_newton->_y;
+      auto &in = m_approximator_newton->_in;
+      auto &out = m_approximator_newton->_out;
+      auto &diffs = m_approximator_newton->_diffs;
+      x.resize (n + 1);
+      y.resize (n + 1);
+      diffs.resize (n + 1);
+      in.resize (m + 1);
+      out.resize (m + 1);
+      if (m_need_to_recalc)
+        {
+          initVector (x, y);
+        }
+      // double max = *std::max_element(out.cbegin(), out.cend(), [](double
+      // x){std::abs(x);});
+      y[n / 2] += this->p * max;
+      initInVector (in);
+      calc_out (*this->m_approximator_newton, m_need_to_recalc);
+      if (this->content == content_type::both_error)
+        {
+          calc_disrep (in, out, out, f);
+        }
+
+      out = m_approximator_newton->get_out ();
+      auto [min_y_it, max_y_it] = std::minmax_element (begin (out), end (out));
+      auto [min_y_n, max_y_n] = std::pair{*min_y_it, *max_y_it};
+      if (min_y_n < min_y)
+        min_y = min_y_n;
+      if (max_y_n > max_y)
+        max_y = max_y_n;
+      if (this->content == content_type::newton)
+        {
+          min_y = min_y_n;
+          max_y = max_y_n;
+        }
+
+      fflush (stdout);
+    }
+  m_need_to_recalc = 0;
+
+  painter.save ();
   double delta_y = 0.01 * (max_y - min_y);
   auto mod_min_y = min_y - delta_y;
   auto mod_max_y = max_y + delta_y;
-
-  painter.save ();
   scale (painter, mod_max_y, mod_min_y);
+  QPen pen (Qt::red);
 
-  paintMap (in, out, painter, Qt::red);
+  if (this->content != content_type::newton)
+    paintMap (in, out, painter, pen);
+
+  pen = QPen (Qt::green);
+  if (this->content != content_type::cubic_spline && this->n <= 50)
+    paintMap (m_approximator_newton->_in, m_approximator_newton->_out, painter,
+              pen);
+  if (this->content != content_type::both_error)
+    {
+      vector x;
+      vector y;
+      x.resize (m + 1);
+      y.resize (m + 1);
+      initVector (x, y);
+      pen.setColor (Qt::white);
+      QVector<qreal> v;
+      qreal space = 8;
+      v << 8 << space;
+      pen.setDashPattern (v);
+      paintMap (x, y, painter, pen);
+    }
+
   paintAxis (painter, mod_max_y, mod_min_y);
   painter.restore ();
 
+  std::cout << "paint time: " << (t5 - t4).count () / 1.e9 << "s" << std::endl;
+  auto t3 = std::chrono::high_resolution_clock::now ();
+  this->elapsed = (t3 - t0).count () / 1.e9;
   printMiscInfo (painter, min_y, max_y);
 }
 
@@ -580,20 +686,18 @@ Window::findDsrKk (std::vector<double> &out, std::vector<double> &in, size_t k)
 }
 
 void
-Window::calc_out (bool to_recalc)
+Window::calc_out (Approximator &approx, bool to_recalc)
 {
-  double d1 = df (m_approximator->_x[0]);
-  double dn = df (m_approximator->_x[n]);
-  m_approximator->update (d1, dn, method);
-  m_approximator->computeOut (to_recalc);
+  double d1 = df (approx._x[0]);
+  double dn = df (approx._x[n]);
+  approx.update (d1, dn, GraphMethod::newton);
+  approx.computeOut (to_recalc);
 }
 
 void
-Window::paintMap (vector &x, vector &y, QPainter &painter,
-                  Qt::GlobalColor color)
+Window::paintMap (vector &x, vector &y, QPainter &painter, QPen &pen)
 {
   auto p = QPainterPath ();
-  QPen pen (color);
   pen.setCosmetic (1);
   painter.setPen (pen);
   p.moveTo (QPointF (x[0], y[0]));
