@@ -142,9 +142,13 @@ Window::parse_command_line (int argc, char *argv[])
     return -1;
 
   if (sscanf (argv[1], "%lf", &a) != 1 || sscanf (argv[2], "%lf", &b) != 1 ||
-      b - a < 1.e-6 || (argc > 3 && sscanf (argv[3], "%d", &n) != 1) || n <= 0
-      || (sscanf (argv[4], "%d", &this->func_id) != 1))
+      b - a < 1.e-6 || (argc > 3 && sscanf (argv[3], "%d", &n) != 1) ||
+      n <= 0 || (sscanf (argv[4], "%d", &this->func_id) != 1))
     return -2;
+  for (int i = 0; i < 7; i++)
+    {
+      change_func ();
+    }
 
   return 0;
 }
