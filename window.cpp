@@ -468,9 +468,10 @@ Window::paintEvent (QPaintEvent * /* event */)
   x_real.resize (m + 1);
   y_real.resize (m + 1);
   initVector (x_real, y_real);
-  double max = *std::max_element (
-      y_real.cbegin (), y_real.cend (),
-      [] (double x, double y) { return std::abs (x) < std::abs (y); });
+  double max = 0.1 ** std::max_element (y_real.cbegin (), y_real.cend (),
+                                        [] (double x, double y) {
+                                          return std::abs (x) < std::abs (y);
+                                        });
   y[n / 2] += this->p * max;
   initInVector (in);
 
