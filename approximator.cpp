@@ -121,14 +121,11 @@ bool
 Approximator::initCubicSpline (double d1, double dn)
 {
   int n = _x.size ();
-//  auto matr = new double[3 * n];
-//  auto a = matr;
-//  auto b = a + n;
-//  auto c = b + n;
   _diffs.reserve (n);
+  _a.reserve (n);
+  _b.reserve (n);
+  _c.reserve (n);
   auto &d = _diffs;
-  //  memset (matr, 0, sizeof (double) * n * 3);
-
   _b[0] = 1;
   _c[0] = 0;
   d[0] = d1;
@@ -136,34 +133,26 @@ Approximator::initCubicSpline (double d1, double dn)
   _a[n - 1] = 0;
   d[n - 1] = dn;
 
-  _c[9] /= _b[0];
+  _c[0] /= _b[0];
   d[0] /= _b[0];
   for (int i = 1; i < n - 1; i++)
     {
       _a[i] = _x[i + 1] - _x[i];
-      _b[i] = _x[i + 1] - _x[i - 1];
+      _b[i] = 2*(_x[i + 1] - _x[i - 1]);
       _c[i] = _x[i] - _x[i - 1];
       double diff1 = (_y[i] - _y[i - 1]) / (_x[i] - _x[i - 1]);
       double diff2 = (_y[i + 1] - _y[i]) / (_x[i + 1] - _x[i]);
-      d[i] = 3 * (diff1 * (_x[i + 1] - _x[i]) +
-                    diff2 * (_x[i] - _x[i - 1]));
-      _c[i] /= _b[i] - _a[i]*_c[i-1];
+      d[i] = 3 * (diff1 * (_x[i + 1] - _x[i]) + diff2 * (_x[i] - _x[i - 1]));
+      _c[i] /= _b[i] - _a[i] * _c[i - 1];
       d[i] = (d[i] - _a[i] * d[i - 1]) / (_b[i] - _a[i] * _c[i - 1]);
     }
 
-  auto res = solve (_a.data(), _b.data(), _c.data(), d.data (), n);
+  auto res = solve (_a.data (), _b.data (), _c.data (), d.data (), n);
   if (res)
     {
       printf ("solve failes = %d\n", res);
-//      delete[] matr;
       return res;
     }
-  //  for (int i = 0; i < n; i++)
-  //    {
-  //      _diffs[i] = d[i];
-  //      memcpy(_diffs.)
-  //    }
-//  delete[] matr;
   return 0;
 }
 
@@ -225,12 +214,13 @@ Approximator::Approximator (std::vector<double> &x, std::vector<double> &y,
 
 Approximator::Approximator (GraphMethod method) : _method (method)
 {
-  _x.reserve (10000000);
-  _y.reserve (10000000);
-  if(method == GraphMethod::cubic_spline){
-      _a.reserve(100000000);
-      _b.reserve(100000000);
-      _c.reserve(100000000);
+  _x.reserve (1000000);
+  _y.reserve (1000000);
+  if (method == GraphMethod::cubic_spline)
+    {
+      _a.reserve (1000000);
+      _b.reserve (1000000);
+      _c.reserve (1000000);
     }
   _in.reserve (5000);
   _out.reserve (5000);
@@ -365,14 +355,14 @@ int
 solve (double *a, double *b, double *c, double *d, int n)
 {
   n--; // since we start from x0 (not x1)
-//  c[0] /= b[0];
-//  d[0] /= b[0];
+       //  c[0] /= b[0];
+       //  d[0] /= b[0];
 
-//  for (int i = 1; i < n; i++)
-//    {
-//      c[i] /= b[i] - a[i] * c[i - 1];
-//      d[i] = (d[i] - a[i] * d[i - 1]) / (b[i] - a[i] * c[i - 1]);
-//    }
+  //  for (int i = 1; i < n; i++)
+  //    {
+  //      c[i] /= b[i] - a[i] * c[i - 1];
+  //      d[i] = (d[i] - a[i] * d[i - 1]) / (b[i] - a[i] * c[i - 1]);
+  //    }
   d[n] = (d[n] - a[n] * d[n - 1]) / (b[n] - a[n] * c[n - 1]);
 
   for (int i = n; i-- > 0;)

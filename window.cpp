@@ -110,10 +110,10 @@ Window::Window (QWidget *parent) : QWidget (parent)
   func_id = 6;
   this->content = content_type::newton;
 
-  m_approximator = new Approximator (GraphMethod::cubic_spline);
-  m_approximator_newton = new Approximator (GraphMethod::newton);
-  m_approximator->_x.resize (100000000);
-  m_approximator->_y.resize (100000000);
+  m_approximator = std::make_unique < Approximator > (GraphMethod::cubic_spline);
+  m_approximator_newton = std::make_unique < Approximator > (GraphMethod::newton);
+  m_approximator->_x.resize (1000000);
+  m_approximator->_y.resize (1000000);
   m_approximator->_x.resize (0);
   m_approximator->_y.resize (0);
 

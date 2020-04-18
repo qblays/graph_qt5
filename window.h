@@ -35,8 +35,8 @@ private:
   bool m_need_to_recalc;
   double (*f) (double);
   double (*df) (double);
-  Approximator *m_approximator;
-  Approximator *m_approximator_newton;
+  std::unique_ptr<Approximator> m_approximator;
+  std::unique_ptr<Approximator> m_approximator_newton;
 
   void
   simpleApprox (QPainter &painter, double delta_x);
