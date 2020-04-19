@@ -15,7 +15,7 @@ QMAKE_CXXFLAGS += -g
 #QMAKE_CXXFLAGS += -fsanitize=undefined
 #QMAKE_LFLAGS += -fsanitize=undefined
 
-QMAKE_CXXFLAGS +=  -Ofast -funroll-loops -Wextra -pedantic -Wall -Wcast-qual -march=native -lm
+QMAKE_CXXFLAGS += -ffast-math -Ofast -funroll-loops -Wextra -pedantic -Wall -Wcast-qual -march=native -lm
 HEADERS       = window.h \
     approximator.h \
     graphMethod.h

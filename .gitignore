@@ -2,3 +2,9 @@
 debug
 release
 *.o
+Makefile
+.qmake.stash
+*.user
+*.out
+moc*
+

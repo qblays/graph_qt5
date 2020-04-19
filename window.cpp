@@ -394,7 +394,7 @@ Window::printMiscInfo (QPainter &painter, double min_y, double max_y)
   int shift = 10;
   painter.fillRect (5, 5, 250, 95, brush);
   painter.drawText (shift, 20, func_name + f_name);
-  painter.drawText (150, 20, "n = " + QString::number (n));
+  painter.drawText (160, 20, "n = " + QString::number (n));
   QString content_name;
   switch (this->content)
     {
@@ -413,7 +413,7 @@ Window::printMiscInfo (QPainter &painter, double min_y, double max_y)
     }
 
   painter.drawText (shift, 35, "content = " + content_name);
-  painter.drawText (150, 35, "width = " + QString::number (m));
+  painter.drawText (160, 35, "width = " + QString::number (m));
 
   painter.drawText (
       shift, 50, "a = " + QString::number (a) + " b = " + QString::number (b));
